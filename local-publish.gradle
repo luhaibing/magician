@@ -1,0 +1,13 @@
+apply plugin: 'maven'
+
+uploadArchives {
+    repositories {
+        mavenDeployer {
+            // buildscript.sourceFile 获取这个脚本文件的路径
+            repository(url: uri(rootProject.file("plugins")))
+            pom.groupId = "com.github.luhaibing.magician"
+            pom.artifactId = project.name
+            pom.version = "1.0.0"
+        }
+    }
+}

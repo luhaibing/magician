@@ -1,0 +1,9 @@
+rootProject.name = "magician"
+include ':app'
+include ':localDependencies'
+
+include ':library'
+include ':lib'
+include ':lib2'
+include ':library2'
+include ':mylibrary'

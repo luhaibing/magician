@@ -1,0 +1,53 @@
+// Top-level build file where you can add configuration options common to all sub-projects/modules.
+buildscript {
+    ext {
+        /*
+        kotlin_version = "1.5.21"
+        gradle_version = "4.2.2"
+        */
+        gradle_version = '4.1.1'
+        kotlin_version = "1.4.20"
+    }
+    def file = project.file("plugins")
+    repositories {
+        google()
+        mavenCentral()
+        maven { url 'https://jitpack.io' }
+
+        if (file.exists()) {
+            maven { url uri(file) }
+        }
+    }
+    dependencies {
+        classpath "com.android.tools.build:gradle:$gradle_version"
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        classpath 'com.github.dcendents:android-maven-gradle-plugin:2.1'
+        if (file.exists()) {
+            classpath 'com.github.luhaibing.magician:localDependencies:1.0.0'
+        }
+        // NOTE: Do not place your application dependencies here; they belong
+        // in the individual module build.gradle files
+    }
+}
+
+if (project.file("plugins").exists()) {
+    apply plugin: "dynamic-local-dependency"
+    dependency {
+        uri "dependencies"
+        group "com.mskj.mercer"
+        version "1.0.1"
+    }
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+        jcenter() // Warning: this repository is going to shut down soon
+        maven { url 'https://jitpack.io' }
+    }
+}
+
+task clean(type: Delete) {
+    delete rootProject.buildDir
+}
