@@ -6,7 +6,6 @@ import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ProjectDependency
 import org.gradle.api.internal.artifacts.dependencies.DefaultExternalModuleDependency
-import org.gradle.plugins.ide.internal.tooling.eclipse.DefaultEclipseProjectDependency
 import java.io.File
 
 class DependencyReplace : Plugin<Project> {
@@ -29,31 +28,32 @@ class DependencyReplace : Plugin<Project> {
             mavenArtifactRepository.url = uri(extension.uri())
         }
 
-        // 关系
+        val handles = arrayListOf("api", "implementation", "compileOnly")
+
         val connections = project.configurations.asMap
+            .asSequence()
             .map { entry: Map.Entry<String, Configuration> ->
                 entry.key to entry.value.dependencies.toList()
             }
             .filter {
                 it.second.isNotEmpty()
             }
+            .filter { (configuration, _) ->
+                handles.any { configuration.contains(it, true) }
+                        && !configuration.contains("Metadata", true)
+                        && !configuration.contains("test", true)
+            }
             .flatMap { (configuration, dependencies) ->
                 dependencies.map { dependency ->
                     configuration to dependency
-                }
-            }
-            .filter { (_, dependency) ->
+                }.asSequence()
+            }.filter { (_, dependency) ->
                 dependency is ProjectDependency
-            }
-            .filter { (configuration, _) ->
-                // 现阶段只处理 implementation 方式
-                configuration == "implementation"
-            }
-            .groupBy({ (_, dependency) ->
+            }.groupBy({ (_, dependency) ->
                 dependency.name
             }) { (configuration, _) ->
                 configuration
-            }
+            }.toList()
 
         val configurationContainer = configurations
         connections.flatMap { (dependency, configurations) ->
@@ -61,12 +61,13 @@ class DependencyReplace : Plugin<Project> {
                 configuration to dependency
             }
         }.onEach { (configuration, dependency) ->
-            val dependencySet = configurationContainer.getByName(configuration).dependencies
+            val dependencySet = configurationContainer.getByName(configuration)
+                .dependencies
 
             val exists = File(extension.uri(), "$dependency.json").exists()
             val isApp = project.pluginManager.hasPlugin("com.android.application")
             if (exists && isApp) {
-                dependencySet.removeIf { it.name == dependency }
+                dependencySet.removeIf { it.name == dependency && it is ProjectDependency }
                 configurationContainer.getByName(configuration)
                     .dependencies
                     .add(
@@ -75,7 +76,7 @@ class DependencyReplace : Plugin<Project> {
                         )
                     )
             } else if (exists) {
-                dependencySet.removeIf { it.name == dependency }
+                dependencySet.removeIf { it.name == dependency && it is ProjectDependency }
                 configurationContainer.getByName("compileOnly")
                     .dependencies
                     .add(
@@ -84,13 +85,14 @@ class DependencyReplace : Plugin<Project> {
                         )
                     )
             } else if (!exists && !isApp) {
-                val find = dependencySet.find { it.name == dependency }
+                val find = dependencySet.find { it.name == dependency && it is ProjectDependency }
                 dependencySet.remove(find)
                 configurationContainer.getByName("compileOnly")
                     .dependencies
                     .add(find)
             }
         }
+
     }
 
 }
